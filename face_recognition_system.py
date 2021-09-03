@@ -1,42 +1,57 @@
-import face_recognition
+from face_detection import *
+import face_recognition as fr
+from pathlib import Path
 
-# Load the known images
-image1 = face_recognition.load_image_file('person_1.jpg')
-image2 = face_recognition.load_image_file('person_2.jpg')
-image3 = face_recognition.load_image_file('person_3.jpg')
+class FaceRecognition(FaceDetection):
+    def __init__(self, known_image_name=None, unknown_image=None):
+        self.known_image_name = known_image_name
+        if type(known_image_name) is str:
+            known_image = fr.load_image_file(known_image_name)
+        elif type(known_image_name) is list:
+            known_image = [fr.load_image_file(k) for k in known_image_name]
+        else:
+            known_image = None
+        self.unknown_image = unknown_image
+        super().__init__(image=known_image)
 
-# Get the face encoding of each person. This can fail if no one is found in the photo.
-face_encodings1 = face_recognition.face_encodings(image1)[0]
-face_encodings2 = face_recognition.face_encodings(image2)[0]
-face_encodings3 = face_recognition.face_encodings(image3)[0]
+    def get_info_of_unknown_image(self):
+        unknown_face_locations, unknown_face_landmarks= fr.face_locations(self.unknown_image,number_of_times_to_upsample=2), fr.face_landmarks(self.unknown_image)
+        unknown_face_encodings = fr.face_encodings(self.unknown_image, known_face_locations=unknown_face_locations)
+        return unknown_face_locations, unknown_face_encodings, unknown_face_landmarks
 
-# Create a list of all known face encodings
-known_face_encodings = [
-    face_encodings1,
-    face_encodings2,
-    face_encodings3
-]
+    def recognize_face(self, show_info=True):
+        unknown_face_locations, unknown_face_encodings, unknown_face_landmarks = self.get_info_of_image_list()
 
-# Load the image we want to check
-image_unknown = face_recognition.load_image_file('unknown_7.jpg')
+        if type(self.image) is list:
+            known_face_locations_list, known_face_encodings_list, known_face_landmarks_list = self.get_info_of_image_list()
+        elif self.image is None:
+            return
+        else:
+            known_face_encodings_list = [self.face_encodings]
 
-# Get face encodings for any people in the picture
-face_locations = face_recognition.face_locations(image_unknown, number_of_times_to_upsample=2)
-face_encodings_unknown = face_recognition.face_encodings(image_unknown, known_face_locations=face_locations)
+        results_name = []
+        for unknown_face_encoding in unknown_face_encodings:
+            results = fr.compare_faces(known_face_encodings_list, unknown_face_encoding, tolerance=0.4)
+            for i in range(len(results)):
+                if results[i]:
+                    results_name.append(self.known_image_name[i])
+                    if show_info:
+                        print(f"Found {self.known_image_name[i]} in the photo!")
+        return results_name
 
-# There might be more than one person in the photo, so we need to loop over each face we found
-for unknown_face_encoding in face_encodings_unknown:
+    def get_similarity(self):
+        if type(self.image) is not list and type(self.image) is not None:
+            best_face_distance = 1.0
+            best_face_image = None
+            known_image_encoding = self.face_encodings[0]
+            directory = ''
+            for image_path in Path(directory).glob("*.png"):
+                unknown_image = fr.load_image_file(image_path)
+                face_encodings = fr.face_encodings(unknown_image)
+                face_distance = fr.face_distance(face_encodings, known_image_encoding)
+                if face_distance < best_face_distance:
+                    best_face_distance = face_distance
+                    best_face_image = unknown_image
+            pil_image = pi.fromarray(best_face_image)
+            pil_image.show()
 
-    # Test if this unknown face encoding matches any of the three people we know
-    results = face_recognition.compare_faces(known_face_encodings, unknown_face_encoding)
-
-    name = "Unknown"
-
-    if results[0]:
-        name = "Person 1"
-    elif results[1]:
-        name = "Person 2"
-    elif results[2]:
-        name = "Person 3"
-
-    print(f"Found {name} in the photo!")
