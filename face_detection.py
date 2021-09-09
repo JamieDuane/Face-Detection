@@ -10,7 +10,7 @@ class FaceDetection(object):
             self.face_encodings = fr.face_encodings(image)
             self.face_landmarks_list = fr.face_landmarks(image)
             self.pil_image = pi.fromarray(self.image)
-            self.draw = pid.Draw(self.image)
+            self.draw = pid.Draw(self.pil_image)
 
     def find_number_of_faces(self, show_info=False):
         number_of_faces = len(self.face_locations)
@@ -44,7 +44,7 @@ class FaceDetection(object):
                 face_encodings_list.append(fr.face_encodings(img))
                 face_landmarks_list.append(fr.face_landmarks(img))
             return face_locations_list, face_encodings_list, face_landmarks_list
-        return
+        return self.face_locations, self.face_encodings, self.face_landmarks_list
 
     def make_up_digitally(self, show_image=True):
         d = pid.Draw(self.pil_image, 'RGBA')

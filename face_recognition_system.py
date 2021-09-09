@@ -5,14 +5,8 @@ from pathlib import Path
 class FaceRecognition(FaceDetection):
     def __init__(self, known_image_name=None, unknown_image=None):
         self.known_image_name = known_image_name
-        if type(known_image_name) is str:
-            known_image = fr.load_image_file(known_image_name)
-        elif type(known_image_name) is list:
-            known_image = [fr.load_image_file(k) for k in known_image_name]
-        else:
-            known_image = None
         self.unknown_image = unknown_image
-        super().__init__(image=known_image)
+        super().__init__(image=unknown_image)
 
     def get_info_of_unknown_image(self):
         unknown_face_locations, unknown_face_landmarks= fr.face_locations(self.unknown_image,number_of_times_to_upsample=2), fr.face_landmarks(self.unknown_image)
@@ -32,11 +26,12 @@ class FaceRecognition(FaceDetection):
         results_name = []
         for unknown_face_encoding in unknown_face_encodings:
             results = fr.compare_faces(known_face_encodings_list, unknown_face_encoding, tolerance=0.4)
+            k = list(self.known_image_name)
             for i in range(len(results)):
-                if results[i]:
-                    results_name.append(self.known_image_name[i])
+                if results[i] is not None:
+                    results_name.append(k[i])
                     if show_info:
-                        print(f"Found {self.known_image_name[i]} in the photo!")
+                        print(f"Found {k[i]} in the photo!")
         return results_name
 
     def get_similarity(self):
